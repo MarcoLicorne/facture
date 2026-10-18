@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facture - Licorne</title>
+  <!-- Bibliothèques CDN : html2pdf.js et FontAwesome Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary-color: #0b2240;
+      --accent-gold: #c5a059;
+      --bg-gray: #f3f5f8;
+      --text-dark: #1a202c;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #e2e8f0;
+      padding: 20px;
+      color: var(--text-dark);
+    }
+
+    /* Barre d'action supérieure */
+    .action-bar {
+      max-width: 800px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-edit {
+      background-color: #ffffff;
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+    }
+
+    .btn-edit.active {
+      background-color: #22c55e;
+      color: white;
+      border-color: #22c55e;
+    }
+
+    .btn-pdf {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* Conteneur de la Facture */
+    .invoice-card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 4px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+      min-height: 1000px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Filigrane d'arrière-plan */
+    .watermark {
+      position: absolute;
+      bottom: -40px;
+      right: -40px;
+      width: 380px;
+      opacity: 0.08;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .invoice-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* En-tête */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      fill: var(--primary-color);
+    }
+
+    .company-name {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--primary-color);
+    }
+
+    .invoice-title-container {
+      text-align: right;
+    }
+
+    .invoice-title {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--primary-color);
+    }
+
+    .header-line {
+      height: 2px;
+      background-color: var(--accent-gold);
+      margin-top: 5px;
+      width: 100%;
+    }
+
+    /* Informations de l'Entreprise */
+    .company-details {
+      margin-bottom: 25px;
+      font-size: 13px;
+      color: var(--text-dark);
+      line-height: 1.6;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+
+    .detail-row i {
+      color: var(--accent-gold);
+      width: 16px;
+      text-align: center;
+    }
+
+    .separator-line {
+      height: 1px;
+      background-color: var(--accent-gold);
+      margin: 20px 0;
+      opacity: 0.7;
+    }
+
+    /* Encadré Client */
+    .client-box {
+      background-color: var(--bg-gray);
+      border-radius: 6px;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+    }
+
+    .box-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1px;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .box-title i {
+      color: var(--accent-gold);
+    }
+
+    .client-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 6px 10px;
+      font-size: 13.5px;
+    }
+
+    .client-label {
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    .client-value {
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    /* Tableau des Prestations */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+    }
+
+    .items-table th {
+      background-color: var(--primary-color);
+      color: white;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 12px 15px;
+      text-align: left;
+    }
+
+    .items-table th:nth-child(2),
+    .items-table th:nth-child(3),
+    .items-table th:nth-child(4) {
+      text-align: right;
+    }
+
+    .items-table td {
+      padding: 15px;
+      border-bottom: 1px solid var(--accent-gold);
+      font-size: 13.5px;
+      vertical-align: top;
+    }
+
+    .items-table td:nth-child(2),
+    .items-table td:nth-child(3),
+    .items-table td:nth-child(4) {
+      text-align: right;
+    }
+
+    .item-num {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background-color: var(--accent-gold);
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      font-weight: bold;
+      font-size: 12px;
+      margin-right: 10px;
+      float: left;
+    }
+
+    .item-title {
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .item-desc {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    /* Section Total */
+    .total-container {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 30px;
+    }
+
+    .total-box {
+      background-color: var(--bg-gray);
+      border-radius: 6px;
+      padding: 12px 25px;
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .total-label {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1px;
+      color: var(--primary-color);
+    }
+
+    .total-amount {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary-color);
+      border-bottom: 2px solid var(--accent-gold);
+      padding-bottom: 2px;
+    }
+
+    /* Informations de Paiement */
+    .payment-info {
+      margin-bottom: 40px;
+    }
+
+    .payment-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .payment-text strong {
+      color: var(--text-dark);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Pied de page */
+    .footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .thanks-title {
+      font-family: 'Georgia', serif;
+      font-size: 36px;
+      font-style: italic;
+      color: var(--accent-gold);
+      display: inline-block;
+      position: relative;
+    }
+
+    .thanks-title::after {
+      content: '';
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      width: 50px;
+      height: 1px;
+      background-color: var(--accent-gold);
+    }
+
+    .thanks-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      margin-bottom: 20px;
+    }
+
+    .footer-line {
+      height: 1px;
+      background-color: var(--accent-gold);
+      margin-bottom: 15px;
+    }
+
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .social-icon {
+      width: 24px;
+      height: 24px;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* Style interactif pour l'édition */
+    [contenteditable="true"] {
+      outline: 2px dashed var(--accent-gold) !important;
+      background-color: rgba(197, 160, 89, 0.1);
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Boutons d'action -->
+  <div class="action-bar">
+    <button class="btn btn-edit" id="toggleEditBtn" onclick="toggleEdit()">
+      <i class="fa-solid fa-pen-to-square"></i> Activer la modification
+    </button>
+    <button class="btn btn-pdf" onclick="generatePDF()">
+      <i class="fa-solid fa-file-pdf"></i> Télécharger PDF
+    </button>
+  </div>
+
+  <!-- Contenu de la Facture -->
+  <div class="invoice-card" id="invoice">
+    
+    <!-- Filigrane Licorne SVG -->
+    <svg class="watermark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#0b2240" d="M80,20 C70,10 55,5 40,15 C30,22 25,35 20,45 C15,55 10,60 5,65 C15,65 25,60 30,55 C25,70 20,85 10,95 C30,90 45,75 55,60 C65,70 80,70 90,60 C80,55 75,45 80,35 C85,25 90,25 80,20 Z M45,25 C47,20 52,18 55,20 C53,25 48,27 45,25 Z"/>
+    </svg>
+
+    <div class="invoice-content">
+      <!-- En-tête avec Logo et Titre -->
+      <div class="header">
+        <div class="logo-section">
+          <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M80,20 C70,10 55,5 40,15 C30,22 25,35 20,45 C15,55 10,60 5,65 C15,65 25,60 30,55 C25,70 20,85 10,95 C30,90 45,75 55,60 C65,70 80,70 90,60 C80,55 75,45 80,35 C85,25 90,25 80,20 Z M45,25 C47,20 52,18 55,20 C53,25 48,27 45,25 Z"/>
+          </svg>
+          <div class="company-name editable">LICORNE</div>
+        </div>
+        <div class="invoice-title-container">
+          <div class="invoice-title">FACTURE</div>
+          <div class="header-line"></div>
+        </div>
+      </div>
+
+      <!-- Coordonnées Émetteur -->
+      <div class="company-details">
+        <div class="detail-row">
+          <i class="fa-regular fa-id-card"></i>
+          <div><strong>LICORNE</strong></div>
+        </div>
+        <div class="detail-row">
+          <i class="fa-solid fa-hashtag" style="font-size:11px;"></i>
+          <div>NIF : <span class="editable">3018 406 414</span></div>
+        </div>
+        <div class="detail-row">
+          <i class="fa-solid fa-file-invoice" style="font-size:11px;"></i>
+          <div>STAT : <span class="editable">70209 11 2024 0 00350</span></div>
+        </div>
+        <div class="detail-row" style="margin-top: 5px;">
+          <i class="fa-solid fa-location-dot"></i>
+          <div class="editable">Villa Princesse Nanisana lot II H2</div>
+        </div>
+        <div class="detail-row">
+          <i class="fa-solid fa-phone"></i>
+          <div>Téléphone : <span class="editable">+261 34 32 123 69</span></div>
+        </div>
+      </div>
+
+      <div class="separator-line"></div>
+
+      <!-- Infos Client -->
+      <div class="client-box">
+        <div class="box-title">
+          <i class="fa-solid fa-user"></i> CLIENT
+        </div>
+        <div class="client-grid">
+          <div class="client-label">Nom / Entreprise</div>
+          <div class="client-value">: <span class="editable">Rinah Rah</span></div>
+
+          <div class="client-label">Adresse</div>
+          <div class="client-value">: <span class="editable"></span></div>
+
+          <div class="client-label">Téléphone</div>
+          <div class="client-value">: <span class="editable">0328592256</span></div>
+
+          <div class="client-label">Email</div>
+          <div class="client-value">: <span class="editable"></span></div>
+        </div>
+      </div>
+
+      <!-- Tableau des Produits / Services -->
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th style="width: 50%;">DÉSIGNATION</th>
+            <th style="width: 15%;">QUANTITÉ</th>
+            <th style="width: 18%;">PRIX UNITAIRE</th>
+            <th style="width: 17%;">MONTANT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="item-num editable">1</span>
+              <div>
+                <div class="item-title editable">Marketing STARTER</div>
+                <div class="item-desc editable">Formation 7 jours en ligne.</div>
+              </div>
+            </td>
+            <td class="editable">1</td>
+            <td class="editable">197.000 Ar</td>
+            <td class="editable">197.000 Ar</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Total TTC -->
+      <div class="total-container">
+        <div class="total-box">
+          <div class="total-label">TOTAL TTC</div>
+          <div class="total-amount editable">197.000 Ar</div>
+        </div>
+      </div>
+
+      <!-- Instructions de paiement -->
+      <div class="payment-info">
+        <div class="box-title">
+          <i class="fa-regular fa-credit-card"></i> INFORMATIONS DE PAIEMENT
+        </div>
+        <div class="payment-text">
+          <strong class="editable">Mobile Money / Virement / Espèces</strong>
+          <span class="editable">Les coordonnées vous seront communiquées après confirmation de votre inscription.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pied de page & Remerciements -->
+    <div class="footer">
+      <div class="thanks-title editable">Merci</div>
+      <div class="thanks-sub editable">pour votre confiance.</div>
+      <div class="footer-line"></div>
+      <div class="social-link">
+        <div class="social-icon"><i class="fa-brands fa-facebook-f"></i></div>
+        <span class="editable">Licorne</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts JavaScript -->
+  <script>
+    let isEditing = false;
+
+    // Activer / Désactiver l'édition directe sur la page
+    function toggleEdit() {
+      isEditing = !isEditing;
+      const editables = document.querySelectorAll('.editable');
+      const btn = document.getElementById('toggleEditBtn');
+
+      editables.forEach(el => {
+        el.contentEditable = isEditing;
+      });
+
+      if (isEditing) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer / Verrouiller';
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Activer la modification';
+      }
+    }
+
+    // Génération et Téléchargement PDF
+    function generatePDF() {
+      if (isEditing) {
+        toggleEdit(); // Verrouiller les champs avant export
+      }
+
+      const element = document.getElementById('invoice');
+      
+      const opt = {
+        margin:       [0, 0, 0, 0],
+        filename:     'Facture_Licorne.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+  </script>
+</body>
+</html>
